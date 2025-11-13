@@ -1,0 +1,10 @@
+Hardware & Requirements
+
+-Installed on raspberry pi 4B
+-POE hat - https://www.amazon.com/dp/B0928ZD7QQ?ref=fed_asin_title or https://www.amazon.com/dp/B0BKK6FXRJ?ref=fed_asin_title
+-Camera module - https://www.amazon.com/dp/B0D95VWCV6?ref=fed_asin_title
+-Accessible via local network via IP address
+
+
+Details: (See hardware and requirements for more information)
+I want you to make a program that will allow me to turn a raspberry pi into a remotely accessible webcam.  I have a program that runs on windows that has access to built in or usb webcams to take photos.  I would like to essentially use a raspberry pi, the camera module, and poe to create an always on webcam that I can install on a windows pcs so my the software I am using can see this raspberry pi camera and use it instead. No security or authentication. Please determine if it is possible and then create a plan for building and install.  Always push updates to GitHub when completed. I will be using GitHub to download to the raspberry pi.  Also, give me instructions on installation and testing for each change you present after building. 
