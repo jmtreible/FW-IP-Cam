@@ -17,6 +17,7 @@ if [[ -z "${CAMERA_BIN:-}" ]]; then
     CAMERA_BIN="rpicam-vid"
   fi
 fi
+
 FFMPEG_BIN=${FFMPEG_BIN:-ffmpeg}
 RTSP_URL=${RTSP_URL:-rtsp://127.0.0.1:8554/camera}
 TEST_MODE=false
