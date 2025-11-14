@@ -29,7 +29,7 @@ Remote IP camera toolkit for running a Raspberry Pi 4B with PoE and a camera mod
    This script will:
    - Install `ffmpeg`, the Raspberry Pi camera stack, helper utilities (`curl`, `wget`, `python3`), and Mediamtx.
    - Create a `mediamtx` service account with access to the camera hardware and apply required permissions.
-   - Install the streaming helper, systemd unit files, and a Mediamtx configuration that disables the optional HTTP-derived services (metrics, playback, RTMP, HLS, WebRTC, SRT) to avoid clashes with other processes binding those ports.
+   - Install the streaming helper, systemd unit files, and a Mediamtx configuration that disables the optional HTTP-derived services (metrics, playback, RTMP, HLS, WebRTC, SRT) and clears their bind addresses so no background process can clash with TCP port 8888.
    - Enable and start the Mediamtx and camera streaming services so they launch automatically on boot and restart if interrupted.
 4. **Verify streaming services**
    The installer enables and starts both services automatically. Confirm they are healthy with:
@@ -37,7 +37,7 @@ Remote IP camera toolkit for running a Raspberry Pi 4B with PoE and a camera mod
    sudo systemctl status mediamtx.service
    sudo systemctl status rpicam-stream.service
    ```
-   The RTSP stream will be available at `rtsp://<pi-ip-address>:8554/camera`.
+   The RTSP stream will be available at `rtsp://<pi-ip-address>:8554/camera` (no `.sdp` suffix).
 
 ### Manual Testing on the Pi
 
@@ -51,7 +51,7 @@ The helper verifies that a camera is detected and not held by another process be
 ## Windows Consumption
 
 1. **Verify the stream** using VLC or ffplay:
-   - Open VLC → `Media` → `Open Network Stream...` → enter `rtsp://<pi-ip-address>:8554/camera`.
+   - Open VLC → `Media` → `Open Network Stream...` → enter `rtsp://<pi-ip-address>:8554/camera` (the `.sdp` suffix is not required for Mediamtx paths).
    - Confirm the video plays smoothly.
 2. **Expose as a webcam** for software that only recognises local cameras:
    - Install [OBS Studio](https://obsproject.com/download) and enable the built-in *Virtual Camera* (Tools → Start Virtual Camera). Add a new *Media Source* pointing to the RTSP URL.
@@ -74,5 +74,5 @@ The helper verifies that a camera is detected and not held by another process be
   sudo journalctl -u mediamtx.service
   sudo journalctl -u rpicam-stream.service
   ```
-- Ensure the Windows PC can reach the Pi's IP address over the network and that firewalls allow TCP port 8554. If VLC still cannot open the feed, rerun `sudo ./scripts/install_pi.sh` to refresh the Mediamtx configuration and verify `sudo systemctl status mediamtx.service` reports `active (running)`.
+- Ensure the Windows PC can reach the Pi's IP address over the network and that firewalls allow TCP port 8554. If VLC still cannot open the feed, rerun `sudo ./scripts/install_pi.sh` to refresh the Mediamtx configuration (which now leaves the HTTP listener unbound) and verify `sudo systemctl status mediamtx.service` reports `active (running)`.
 

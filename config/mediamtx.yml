@@ -2,20 +2,29 @@
 # Install to /etc/mediamtx.yml on the Raspberry Pi.
 
 logLevel: info
-rtsp: yes
 
-# Disable optional listeners so the RTSP server is the only exposed endpoint.
-api: no
-metrics: no
-pprof: no
-playback: no
+# Expose only the RTSP listener; disable every other endpoint explicitly so
+# the daemon never attempts to bind the default HTTP/metrics ports.
+rtsp: yes
 rtmp: no
 hls: no
 webrtc: no
 srt: no
+api: no
+metrics: no
+pprof: no
+playback: no
+httpAddress: ""
+rtspAddress: ":8554"
+rtmpAddress: ""
+hlsAddress: ""
+webrtcAddress: ""
+srtAddress: ""
 
 paths:
   camera:
+    # The stream helper publishes raw H.264 video to this path; no additional
+    # Mediamtx hooks are required for pass-through operation.
+    source: publisher
     runOnReady: ""
     runOnRead: ""
-    # Mediamtx defaults are sufficient for a pass-through H.264 stream.
