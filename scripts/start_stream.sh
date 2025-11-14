@@ -108,6 +108,27 @@ Options:
 USAGE
 }
 
+validate_raw_args() {
+  local arg
+  for arg in "$@"; do
+    case "$arg" in
+      --)
+        break
+        ;;
+      -t?*)
+        echo "Error: '-t' must be provided as a separate flag (for example: '-t -b 8000000')." >&2
+        exit 1
+        ;;
+      -\??*)
+        echo "Error: '-?' cannot be combined with other characters." >&2
+        exit 1
+        ;;
+    esac
+  done
+}
+
+validate_raw_args "$@"
+
 while getopts "w:h:f:b:r:t?" opt; do
   case "$opt" in
     w) WIDTH=$OPTARG ;;
