@@ -1,0 +1,17 @@
+# Minimal Mediamtx configuration for a single unauthenticated camera stream.
+# Install to /etc/mediamtx.yml on the Raspberry Pi.
+
+api: no
+metrics: no
+pprof: no
+playback: no
+rtmp: no
+hls: no
+webrtc: no
+srt: no
+
+paths:
+  camera:
+    runOnReady: ""
+    runOnRead: ""
+    # Mediamtx defaults are sufficient for a pass-through H.264 stream.
