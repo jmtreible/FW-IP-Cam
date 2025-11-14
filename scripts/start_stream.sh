@@ -246,8 +246,9 @@ run_pipeline() {
     --nopreview \
     -o - \
     | "$FFMPEG_BIN" -hide_banner -loglevel warning \
-        -re -f h264 -i - \
-        -c copy -f rtsp "$RTSP_URL"
+        -re -use_wallclock_as_timestamps 1 \
+        -f h264 -i - \
+        -c copy -rtsp_transport tcp -f rtsp "$RTSP_URL"
 }
 
 if [[ "$TEST_MODE" == true ]]; then
