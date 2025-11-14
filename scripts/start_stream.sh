@@ -121,6 +121,52 @@ while getopts "w:h:f:b:r:t?" opt; do
   esac
 done
 
+shift $((OPTIND - 1))
+
+if (($# > 0)); then
+  echo "Error: unexpected argument(s): $*" >&2
+  echo "Separate option flags with spaces (e.g., '-t -b 8000000')." >&2
+  usage >&2
+  exit 1
+fi
+
+ensure_positive_integer() {
+  local name=$1 value=$2
+  if ! [[ $value =~ ^[0-9]+$ ]]; then
+    echo "Error: $name must be a positive integer (received '$value')." >&2
+    exit 1
+  fi
+
+  if ((10#$value <= 0)); then
+    echo "Error: $name must be greater than zero (received '$value')." >&2
+    exit 1
+  fi
+}
+
+ensure_valid_bitrate() {
+  local value=$1
+  if [[ $value =~ ^[0-9]+$ ]]; then
+    if ((10#$value <= 0)); then
+      echo "Error: Bitrate must be greater than zero (received '$value')." >&2
+      exit 1
+    fi
+    return
+  fi
+
+  if [[ $value =~ ^[0-9]+[kKmMgG]$ ]]; then
+    return
+  fi
+
+  echo "Error: Bitrate must be numeric (e.g., 8000000 or 8M). Received '$value'." >&2
+  echo "If you intended to combine '-t' with another flag, place a space between them (for example: '-t -b 8000000')." >&2
+  exit 1
+}
+
+ensure_positive_integer "width" "$WIDTH"
+ensure_positive_integer "height" "$HEIGHT"
+ensure_positive_integer "framerate" "$FRAMERATE"
+ensure_valid_bitrate "$BITRATE"
+
 if [[ "$TEST_MODE" == true ]]; then
   if ! camera_idle; then
     exit 1
