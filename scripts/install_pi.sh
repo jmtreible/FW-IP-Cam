@@ -22,7 +22,7 @@ die() {
 log "Updating apt package index"
 apt-get update
 log "Installing camera and streaming dependencies"
-apt-get install -y ffmpeg libcamera-apps unzip wget tar
+apt-get install -y ffmpeg libcamera-apps unzip wget curl tar python3
 
 if ! command -v systemctl >/dev/null 2>&1; then
   die "systemd is required for service management on Raspberry Pi OS."
@@ -39,10 +39,12 @@ if [[ ! -f "$CONFIG_SRC" || ! -f "$START_SCRIPT_SRC" || ! -f "$STREAM_SERVICE_SR
   die "Repository files not found. Run this script from within the cloned FW-IP-Cam repo."
 fi
 
-MEDIAMTX_VERSION="latest"
 ARCH=$(uname -m)
 case "$ARCH" in
-  armv7l|armv6l)
+  armv6l)
+    MEDIAMTX_ARCH="armv6"
+    ;;
+  armv7l)
     MEDIAMTX_ARCH="armv7"
     ;;
   aarch64)
@@ -75,11 +77,53 @@ install -d -o mediamtx -g mediamtx /var/log/mediamtx
 TMPDIR=$(mktemp -d)
 trap 'rm -rf "$TMPDIR"' EXIT
 
-URL="https://github.com/bluenviron/mediamtx/releases/${MEDIAMTX_VERSION}/download/mediamtx_linux_${MEDIAMTX_ARCH}.tar.gz"
+RELEASE_API="https://api.github.com/repos/bluenviron/mediamtx/releases/latest"
+log "Resolving Mediamtx release metadata"
+if ! RELEASE_JSON=$(curl -fsSL "$RELEASE_API"); then
+  die "Unable to query latest Mediamtx release information"
+fi
+
+if ! MEDIAMTX_URL=$(MEDIAMTX_ARCH="$MEDIAMTX_ARCH" MEDIAMTX_RELEASE_JSON="$RELEASE_JSON" python3 <<'PY'
+import json
+import os
+import sys
+
+release_json = os.environ.get("MEDIAMTX_RELEASE_JSON")
+arch = os.environ.get("MEDIAMTX_ARCH")
+
+if not release_json:
+    print("Missing release metadata", file=sys.stderr)
+    sys.exit(1)
+
+if not arch:
+    print("Missing architecture information", file=sys.stderr)
+    sys.exit(1)
+
+try:
+    release = json.loads(release_json)
+except json.JSONDecodeError as exc:
+    print(f"Failed to parse release metadata: {exc}", file=sys.stderr)
+    sys.exit(1)
+
+for asset in release.get("assets", []):
+    name = asset.get("name", "")
+    if name.endswith(f"linux_{arch}.tar.gz"):
+        url = asset.get("browser_download_url")
+        if url:
+            sys.stdout.write(url)
+            sys.exit(0)
+
+print(f"No release asset found for architecture '{arch}'", file=sys.stderr)
+sys.exit(1)
+PY
+); then
+  die "Unable to determine Mediamtx download URL for architecture ${MEDIAMTX_ARCH}"
+fi
+
 FILE="$TMPDIR/mediamtx.tar.gz"
 
-log "Downloading Mediamtx from $URL"
-wget -qO "$FILE" "$URL" || die "Unable to download Mediamtx archive"
+log "Downloading Mediamtx from $MEDIAMTX_URL"
+wget -qO "$FILE" "$MEDIAMTX_URL" || die "Unable to download Mediamtx archive"
 log "Extracting Mediamtx archive"
 tar -xzf "$FILE" -C "$TMPDIR"
 install -m 755 "$TMPDIR"/mediamtx /usr/local/bin/mediamtx

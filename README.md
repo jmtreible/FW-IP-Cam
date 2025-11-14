@@ -27,7 +27,7 @@ Remote IP camera toolkit for running a Raspberry Pi 4B with PoE and a camera mod
    sudo ./scripts/install_pi.sh
    ```
    This script will:
-   - Install `ffmpeg`, the Raspberry Pi camera stack, and Mediamtx.
+  - Install `ffmpeg`, the Raspberry Pi camera stack, helper utilities (`curl`, `wget`, `python3`), and Mediamtx.
    - Create a `mediamtx` service account with access to the camera hardware and apply required permissions.
    - Install the streaming helper and systemd unit files.
    - Enable and start the Mediamtx and camera streaming services so they launch automatically on boot and restart if interrupted.
