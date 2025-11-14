@@ -188,15 +188,9 @@ ensure_positive_integer "height" "$HEIGHT"
 ensure_positive_integer "framerate" "$FRAMERATE"
 ensure_valid_bitrate "$BITRATE"
 
-if [[ "$TEST_MODE" == true ]]; then
-  if ! camera_idle; then
-    exit 1
-  fi
-else
-  while ! camera_idle; do
-    echo "Retrying camera availability in 10 seconds..." >&2
-    sleep 10
-  done
+if ! command -v python3 >/dev/null 2>&1; then
+  echo "Error: python3 is required for RTSP connectivity checks." >&2
+  exit 1
 fi
 
 if ! command -v "$CAMERA_BIN" >/dev/null 2>&1; then
@@ -208,6 +202,87 @@ if ! command -v "$FFMPEG_BIN" >/dev/null 2>&1; then
   echo "Error: $FFMPEG_BIN not found. Install ffmpeg (sudo apt install ffmpeg)." >&2
   exit 1
 fi
+
+parse_rtsp_target() {
+  local url=$1
+  mapfile -t parts < <(python3 - "$url" <<'PY'
+from urllib.parse import urlparse
+import sys
+
+raw = sys.argv[1]
+parsed = urlparse(raw)
+
+if parsed.scheme and parsed.scheme.lower() != "rtsp":
+    print(f"Error: unsupported scheme '{parsed.scheme}'. Use rtsp:// URLs.", file=sys.stderr)
+    sys.exit(1)
+
+host = parsed.hostname
+if not host:
+    print("Error: RTSP URL is missing a host name.", file=sys.stderr)
+    sys.exit(1)
+
+port = parsed.port or 554
+
+print(host)
+print(port)
+PY
+  ) || return 1
+
+  RTSP_HOST=${parts[0]}
+  RTSP_PORT=${parts[1]}
+}
+
+if ! parse_rtsp_target "$RTSP_URL"; then
+  exit 1
+fi
+
+rtsp_listener_ready() {
+  python3 - "$RTSP_HOST" "$RTSP_PORT" <<'PY' >/dev/null 2>&1
+import socket
+import sys
+
+host = sys.argv[1]
+port = int(sys.argv[2])
+
+try:
+    with socket.create_connection((host, port), timeout=2):
+        pass
+except OSError:
+    sys.exit(1)
+PY
+}
+
+wait_for_rtsp_listener() {
+  local attempt=0
+  local max_attempts=10
+
+  while (( attempt < max_attempts )); do
+    if rtsp_listener_ready; then
+      return 0
+    fi
+
+    sleep 1
+    ((attempt++))
+  done
+
+  # Print the actual error from the connectivity probe for the final failure
+  python3 - "$RTSP_HOST" "$RTSP_PORT" <<'PY'
+import socket
+import sys
+
+host = sys.argv[1]
+port = int(sys.argv[2])
+
+try:
+    with socket.create_connection((host, port), timeout=2):
+        pass
+except OSError as exc:
+    print(f"Unable to reach {host}:{port} ({exc}).", file=sys.stderr)
+    sys.exit(1)
+PY
+
+  return 1
+}
 
 camera_available() {
   if [[ -z "$CAMERA_CHECK_BIN" ]]; then
@@ -252,7 +327,14 @@ run_pipeline() {
 }
 
 if [[ "$TEST_MODE" == true ]]; then
+  if ! camera_idle; then
+    exit 1
+  fi
   if ! camera_available; then
+    exit 1
+  fi
+  if ! wait_for_rtsp_listener; then
+    echo "Mediamtx is not accepting connections at ${RTSP_HOST}:${RTSP_PORT}. Ensure mediamtx.service is running." >&2
     exit 1
   fi
   run_pipeline
@@ -266,6 +348,12 @@ else
 
     if ! camera_available; then
       echo "Retrying camera detection in 10 seconds..." >&2
+      sleep 10
+      continue
+    fi
+
+    if ! wait_for_rtsp_listener; then
+      echo "Mediamtx is not accepting connections at ${RTSP_HOST}:${RTSP_PORT}. Retrying in 10 seconds..." >&2
       sleep 10
       continue
     fi

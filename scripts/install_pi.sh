@@ -153,6 +153,38 @@ systemctl restart mediamtx.service
 log "Restarting camera streaming service"
 systemctl restart rpicam-stream.service
 
+check_rtsp_listener() {
+  local host="127.0.0.1"
+  local port=8554
+  local attempt=0
+  local max_attempts=10
+
+  while (( attempt < max_attempts )); do
+    if python3 - "$host" "$port" <<'PY' >/dev/null 2>&1; then
+import socket
+import sys
+
+host = sys.argv[1]
+port = int(sys.argv[2])
+
+try:
+    with socket.create_connection((host, port), timeout=2):
+        pass
+except OSError:
+    sys.exit(1)
+PY
+      log "Confirmed RTSP listener on ${host}:${port}"
+      return 0
+    fi
+
+    sleep 1
+    ((attempt++))
+  done
+
+  warn "Unable to confirm RTSP listener on ${host}:${port}. Check mediamtx logs with 'sudo journalctl -u mediamtx.service'."
+  return 1
+}
+
 for unit in mediamtx.service rpicam-stream.service; do
   if ! systemctl show -p FragmentPath --value "$unit" >/dev/null 2>&1; then
     die "systemd does not recognize ${unit}. Confirm the unit file exists in /etc/systemd/system and rerun the installer."
@@ -164,6 +196,8 @@ for unit in mediamtx.service rpicam-stream.service; do
     warn "${unit} is installed but not running. Review 'sudo systemctl status ${unit}' for diagnostics."
   fi
 done
+
+check_rtsp_listener || true
 
 echo "Installation complete. Streaming services are now running."
 echo "Check their status with:"

@@ -31,13 +31,24 @@ Remote IP camera toolkit for running a Raspberry Pi 4B with PoE and a camera mod
    - Create a `mediamtx` service account with access to the camera hardware and apply required permissions.
    - Install the streaming helper, systemd unit files, and a Mediamtx configuration that disables the optional HTTP-derived services (metrics, playback, RTMP, HLS, WebRTC, SRT) and clears their bind addresses so no background process can clash with TCP port 8888.
    - Enable and start the Mediamtx and camera streaming services so they launch automatically on boot and restart if interrupted.
+   - Probe the Mediamtx RTSP listener on `127.0.0.1:8554` after it restarts and emit a warning if the socket cannot be reached so you know immediately whether the port is open locally.
 4. **Verify streaming services**
-   The installer enables and starts both services automatically. Confirm they are healthy with:
+   The installer enables and starts both services automatically, then tests the RTSP socket. Confirm they are healthy with:
    ```bash
    sudo systemctl status mediamtx.service
    sudo systemctl status rpicam-stream.service
    ```
    The RTSP stream will be available at `rtsp://<pi-ip-address>:8554/camera` (no `.sdp` suffix).
+   If you want to double-check the port manually later, run:
+   ```bash
+   sudo ss -ltnp | grep 8554 || python3 - <<'PY'
+import socket
+
+with socket.create_connection(("127.0.0.1", 8554), timeout=2):
+    pass
+print("Mediamtx RTSP listener is reachable on 127.0.0.1:8554")
+PY
+   ```
 
 ### Manual Testing on the Pi
 
@@ -46,7 +57,7 @@ To validate the pipeline without systemd (useful for troubleshooting), stop the 
 sudo systemctl stop rpicam-stream.service
 ./scripts/start_stream.sh -t
 ```
-The helper verifies that a camera is detected and not held by another process before attempting to stream. If another pipeline (including the `rpicam-stream.service` unit) is still active, it prints the owning PIDs and exits so you can stop them before retrying. If it reports no cameras are available, re-seat the ribbon cable, confirm the interface is enabled, and ensure no other capture commands are running. It also injects presentation timestamps before pushing over TCP so RTSP clients receive a continuous stream. Press `Ctrl+C` to terminate the test stream once video is confirmed.
+The helper verifies that the RTSP server is accepting connections, a camera is detected, and the device is not held by another process before attempting to stream. If another pipeline (including the `rpicam-stream.service` unit) is still active, it prints the owning PIDs and exits so you can stop them before retrying. If it reports no cameras are available, re-seat the ribbon cable, confirm the interface is enabled, and ensure no other capture commands are running. It also injects presentation timestamps before pushing over TCP so RTSP clients receive a continuous stream. Press `Ctrl+C` to terminate the test stream once video is confirmed.
 
 ## Windows Consumption
 
@@ -74,5 +85,5 @@ The helper verifies that a camera is detected and not held by another process be
   sudo journalctl -u mediamtx.service
   sudo journalctl -u rpicam-stream.service
   ```
-- Ensure the Windows PC can reach the Pi's IP address over the network and that firewalls allow TCP port 8554. If VLC still cannot open the feed, rerun `sudo ./scripts/install_pi.sh` to refresh the Mediamtx configuration (which now leaves the HTTP listener unbound) and verify `sudo systemctl status mediamtx.service` reports `active (running)`.
+- Ensure the Windows PC can reach the Pi's IP address over the network and that firewalls allow TCP port 8554. If VLC still cannot open the feed, rerun `sudo ./scripts/install_pi.sh` to refresh the Mediamtx configuration (which now leaves the HTTP listener unbound) and verify `sudo systemctl status mediamtx.service` reports `active (running)`. You can also validate the listener directly on the Pi with `sudo ss -ltnp | grep 8554` or `python3 - <<'PY'` as shown above; a connection failure indicates Mediamtx never opened the socket.
 
