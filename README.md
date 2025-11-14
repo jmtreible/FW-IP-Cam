@@ -46,7 +46,7 @@ To validate the pipeline without systemd (useful for troubleshooting), stop the 
 sudo systemctl stop rpicam-stream.service
 ./scripts/start_stream.sh -t
 ```
-The helper verifies that a camera is detected and not held by another process before attempting to stream. If another pipeline (including the `rpicam-stream.service` unit) is still active, it prints the owning PIDs and exits so you can stop them before retrying. If it reports no cameras are available, re-seat the ribbon cable, confirm the interface is enabled, and ensure no other capture commands are running. Press `Ctrl+C` to terminate the test stream once video is confirmed.
+The helper verifies that a camera is detected and not held by another process before attempting to stream. If another pipeline (including the `rpicam-stream.service` unit) is still active, it prints the owning PIDs and exits so you can stop them before retrying. If it reports no cameras are available, re-seat the ribbon cable, confirm the interface is enabled, and ensure no other capture commands are running. It also injects presentation timestamps before pushing over TCP so RTSP clients receive a continuous stream. Press `Ctrl+C` to terminate the test stream once video is confirmed.
 
 ## Windows Consumption
 
@@ -74,5 +74,5 @@ The helper verifies that a camera is detected and not held by another process be
   sudo journalctl -u mediamtx.service
   sudo journalctl -u rpicam-stream.service
   ```
-- Ensure the Windows PC can reach the Pi's IP address over the network and that firewalls allow TCP port 8554.
+- Ensure the Windows PC can reach the Pi's IP address over the network and that firewalls allow TCP port 8554. If VLC still cannot open the feed, rerun `sudo ./scripts/install_pi.sh` to refresh the Mediamtx configuration and verify `sudo systemctl status mediamtx.service` reports `active (running)`.
 

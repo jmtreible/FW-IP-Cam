@@ -246,8 +246,8 @@ run_pipeline() {
     --nopreview \
     -o - \
     | "$FFMPEG_BIN" -hide_banner -loglevel warning \
-        -re -use_wallclock_as_timestamps 1 \
-        -f h264 -i - \
+        -fflags +genpts -use_wallclock_as_timestamps 1 \
+        -r "$FRAMERATE" -f h264 -i - \
         -c copy -rtsp_transport tcp -f rtsp "$RTSP_URL"
 }
 
