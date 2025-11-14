@@ -1,0 +1,21 @@
+[Unit]
+Description=Raspberry Pi camera to RTSP stream
+After=mediamtx.service network-online.target
+Wants=mediamtx.service network-online.target
+Requires=mediamtx.service
+
+[Service]
+Type=simple
+User=mediamtx
+Group=mediamtx
+ExecStart=/usr/local/bin/start_pi_stream
+Restart=always
+RestartSec=3
+Environment=RTSP_URL=rtsp://127.0.0.1:8554/camera
+Environment=WIDTH=1920
+Environment=HEIGHT=1080
+Environment=FRAMERATE=30
+Environment=BITRATE=8000000
+
+[Install]
+WantedBy=multi-user.target
