@@ -4,6 +4,11 @@
 api: no
 metrics: no
 pprof: no
+playback: no
+rtmp: no
+hls: no
+webrtc: no
+srt: no
 
 paths:
   camera:

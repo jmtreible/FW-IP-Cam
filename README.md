@@ -29,7 +29,7 @@ Remote IP camera toolkit for running a Raspberry Pi 4B with PoE and a camera mod
    This script will:
    - Install `ffmpeg`, the Raspberry Pi camera stack, helper utilities (`curl`, `wget`, `python3`), and Mediamtx.
    - Create a `mediamtx` service account with access to the camera hardware and apply required permissions.
-   - Install the streaming helper, systemd unit files, and a Mediamtx configuration that disables the optional HTTP/metrics ports to avoid clashes with other services.
+   - Install the streaming helper, systemd unit files, and a Mediamtx configuration that disables the optional HTTP-derived services (metrics, playback, RTMP, HLS, WebRTC, SRT) to avoid clashes with other processes binding those ports.
    - Enable and start the Mediamtx and camera streaming services so they launch automatically on boot and restart if interrupted.
 4. **Verify streaming services**
    The installer enables and starts both services automatically. Confirm they are healthy with:
@@ -62,13 +62,13 @@ Press `Ctrl+C` to terminate the test stream.
 
 - **Change resolution/bitrate**: Edit the `Environment=` lines in `systemd/rpicam-stream.service` and reload with `sudo systemctl daemon-reload` followed by `sudo systemctl restart rpicam-stream.service`.
 - **Adjust Mediamtx config**: Update `/etc/mediamtx.yml` and restart `mediamtx.service`.
-- **Software updates**: Pull repository updates and re-run `sudo ./scripts/install_pi.sh` to reinstall scripts and units.
+- **Software updates**: Pull repository updates and re-run `sudo ./scripts/install_pi.sh` to reinstall scripts and units; the installer automatically restarts both services so configuration changes take effect immediately.
 - **Service missing errors**: If `systemctl` reports `Unit *.service not found`, re-run the installer or manually copy the unit files
   with `sudo cp systemd/*.service /etc/systemd/system/` followed by `sudo systemctl daemon-reload`.
 
 ## Troubleshooting
 
-- Confirm the camera works locally with `libcamera-hello` or `rpicam-still`. If the streaming logs show `No cameras detected...`, reconnect the ribbon cable and re-enable the camera interface in `sudo raspi-config` before retrying.
+- Confirm the camera works locally with `libcamera-hello --list-cameras` or `rpicam-still`. If the streaming logs show `No cameras detected...`, reseat the ribbon cable, reboot, and ensure the camera interface is enabled in `sudo raspi-config` before retrying.
 - Check service status logs:
   ```bash
   sudo journalctl -u mediamtx.service

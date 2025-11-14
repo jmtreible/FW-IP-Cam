@@ -75,12 +75,19 @@ camera_available() {
     return 0
   fi
 
-  if "$CAMERA_CHECK_BIN" --list-cameras >/dev/null 2>&1; then
-    return 0
+  local output
+  if ! output=$("$CAMERA_CHECK_BIN" --list-cameras 2>&1); then
+    echo "$CAMERA_CHECK_BIN --list-cameras failed: $output" >&2
+    echo "Ensure the Raspberry Pi camera stack is installed and try again." >&2
+    return 1
   fi
 
-  echo "No cameras detected by $CAMERA_CHECK_BIN. Ensure the camera is connected and enabled in raspi-config." >&2
-  return 1
+  if grep -qi "no cameras available" <<<"$output"; then
+    echo "No cameras detected by $CAMERA_CHECK_BIN. Ensure the camera ribbon cable is seated and the interface is enabled." >&2
+    return 1
+  fi
+
+  return 0
 }
 
 run_pipeline() {

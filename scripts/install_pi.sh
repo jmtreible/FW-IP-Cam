@@ -143,10 +143,15 @@ done
 log "Reloading systemd unit cache"
 systemctl daemon-reload
 
-log "Enabling and starting Mediamtx"
-systemctl enable --now mediamtx.service
-log "Enabling and starting camera streaming service"
-systemctl enable --now rpicam-stream.service
+log "Enabling Mediamtx"
+systemctl enable mediamtx.service
+log "Enabling camera streaming service"
+systemctl enable rpicam-stream.service
+
+log "Restarting Mediamtx to apply configuration"
+systemctl restart mediamtx.service
+log "Restarting camera streaming service"
+systemctl restart rpicam-stream.service
 
 for unit in mediamtx.service rpicam-stream.service; do
   if ! systemctl show -p FragmentPath --value "$unit" >/dev/null 2>&1; then
