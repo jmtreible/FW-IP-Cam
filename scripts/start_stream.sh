@@ -1,6 +1,18 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+terminate_children() {
+  if command -v pkill >/dev/null 2>&1; then
+    pkill -P $$ 2>/dev/null || true
+  else
+    while read -r child; do
+      [[ -n "$child" ]] || continue
+      kill "$child" 2>/dev/null || true
+    done < <(ps -o pid= --ppid $$ 2>/dev/null)
+  fi
+}
+trap terminate_children EXIT
+
 WIDTH=${WIDTH:-1920}
 HEIGHT=${HEIGHT:-1080}
 FRAMERATE=${FRAMERATE:-30}
@@ -82,7 +94,7 @@ camera_available() {
     return 1
   fi
 
-  if grep -qi "no cameras available" <<<"$output"; then
+  if grep -Eqi "no cameras available|failed to acquire camera|device or resource busy|in use by another process" <<<"$output"; then
     echo "No cameras detected by $CAMERA_CHECK_BIN. Ensure the camera ribbon cable is seated and the interface is enabled." >&2
     return 1
   fi
@@ -112,6 +124,9 @@ run_pipeline() {
 }
 
 if [[ "$TEST_MODE" == true ]]; then
+  if ! camera_available; then
+    exit 1
+  fi
   run_pipeline
 else
   while true; do
