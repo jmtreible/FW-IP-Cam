@@ -1,12 +1,22 @@
 #!/usr/bin/env bash
 set -euo pipefail
-set -o pipefail
 
 WIDTH=${WIDTH:-1920}
 HEIGHT=${HEIGHT:-1080}
 FRAMERATE=${FRAMERATE:-30}
 BITRATE=${BITRATE:-8000000}
-CAMERA_BIN=${CAMERA_BIN:-rpicam-vid}
+
+# Prefer the modern rpicam stack but gracefully fall back to libcamera on
+# older Raspberry Pi OS releases where the new commands are unavailable.
+if [[ -z "${CAMERA_BIN:-}" ]]; then
+  if command -v rpicam-vid >/dev/null 2>&1; then
+    CAMERA_BIN="rpicam-vid"
+  elif command -v libcamera-vid >/dev/null 2>&1; then
+    CAMERA_BIN="libcamera-vid"
+  else
+    CAMERA_BIN="rpicam-vid"
+  fi
+fi
 FFMPEG_BIN=${FFMPEG_BIN:-ffmpeg}
 RTSP_URL=${RTSP_URL:-rtsp://127.0.0.1:8554/camera}
 TEST_MODE=false

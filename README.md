@@ -12,10 +12,11 @@ Remote IP camera toolkit for running a Raspberry Pi 4B with PoE and a camera mod
 
 ## Raspberry Pi Installation
 
-1. **Flash OS & enable camera**
+1. **Flash OS & confirm camera support**
    - Install Raspberry Pi OS (64-bit recommended) and apply all updates.
-   - Enable the camera interface with `sudo raspi-config` (`Interface Options` → `Camera`).
-   - Reboot.
+   - On current Raspberry Pi OS releases the libcamera stack is enabled automatically. If you are using an older image that still
+     exposes `Legacy Camera` inside `sudo raspi-config` (`Interface Options` → `Legacy Camera`), enable it and reboot. If no camera
+     option appears you can proceed—the modern camera stack is already active.
 2. **Clone the repository**
    ```bash
    git clone https://github.com/<your-account>/FW-IP-Cam.git
@@ -27,13 +28,14 @@ Remote IP camera toolkit for running a Raspberry Pi 4B with PoE and a camera mod
    ```
    This script will:
    - Install `ffmpeg`, the Raspberry Pi camera stack, and Mediamtx.
-   - Create a `mediamtx` service account with access to the camera hardware.
+   - Create a `mediamtx` service account with access to the camera hardware and apply required permissions.
    - Install the streaming helper and systemd unit files.
-   - Enable the Mediamtx and camera streaming services on boot.
-4. **Start the services**
+   - Enable and start the Mediamtx and camera streaming services so they launch automatically on boot and restart if interrupted.
+4. **Verify streaming services**
+   The installer enables and starts both services automatically. Confirm they are healthy with:
    ```bash
-   sudo systemctl start mediamtx.service
-   sudo systemctl start rpicam-stream.service
+   sudo systemctl status mediamtx.service
+   sudo systemctl status rpicam-stream.service
    ```
    The RTSP stream will be available at `rtsp://<pi-ip-address>:8554/camera`.
 
@@ -61,6 +63,8 @@ Press `Ctrl+C` to terminate the test stream.
 - **Change resolution/bitrate**: Edit the `Environment=` lines in `systemd/rpicam-stream.service` and reload with `sudo systemctl daemon-reload` followed by `sudo systemctl restart rpicam-stream.service`.
 - **Adjust Mediamtx config**: Update `/etc/mediamtx.yml` and restart `mediamtx.service`.
 - **Software updates**: Pull repository updates and re-run `sudo ./scripts/install_pi.sh` to reinstall scripts and units.
+- **Service missing errors**: If `systemctl` reports `Unit *.service not found`, re-run the installer or manually copy the unit files
+  with `sudo cp systemd/*.service /etc/systemd/system/` followed by `sudo systemctl daemon-reload`.
 
 ## Troubleshooting
 

@@ -9,6 +9,11 @@ fi
 apt-get update
 apt-get install -y ffmpeg libcamera-apps unzip wget tar
 
+if ! command -v systemctl >/dev/null 2>&1; then
+  echo "Error: systemd is required for service management on Raspberry Pi OS." >&2
+  exit 1
+fi
+
 SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 
 CONFIG_SRC="$SCRIPT_DIR/../config/mediamtx.yml"
@@ -36,6 +41,21 @@ case "$ARCH" in
     ;;
 esac
 
+# Create dedicated service account with access to camera hardware
+if ! id -u mediamtx >/dev/null 2>&1; then
+  useradd --system --user-group --home /var/lib/mediamtx --shell /usr/sbin/nologin mediamtx
+fi
+
+if getent group video >/dev/null 2>&1; then
+  usermod -a -G video mediamtx
+fi
+
+if getent group render >/dev/null 2>&1; then
+  usermod -a -G render mediamtx
+fi
+
+install -d -o mediamtx -g mediamtx /var/lib/mediamtx
+install -d -o mediamtx -g mediamtx /var/log/mediamtx
 TMPDIR=$(mktemp -d)
 trap 'rm -rf "$TMPDIR"' EXIT
 
@@ -45,24 +65,18 @@ FILE="$TMPDIR/mediamtx.tar.gz"
 wget -qO "$FILE" "$URL"
 tar -xzf "$FILE" -C "$TMPDIR"
 install -m 755 "$TMPDIR"/mediamtx /usr/local/bin/mediamtx
-install -m 644 "$CONFIG_SRC" /etc/mediamtx.yml
+install -o mediamtx -g mediamtx -m 640 "$CONFIG_SRC" /etc/mediamtx.yml
 
-# Create dedicated user
-if ! id -u mediamtx >/dev/null 2>&1; then
-  useradd --system --user-group --home /var/lib/mediamtx mediamtx
-fi
-
-install -d -o mediamtx -g mediamtx /var/lib/mediamtx
-chown mediamtx:mediamtx /etc/mediamtx.yml
-usermod -a -G video mediamtx
-
-install -m 755 "$START_SCRIPT_SRC" /usr/local/bin/start_pi_stream
-install -m 644 "$STREAM_SERVICE_SRC" /etc/systemd/system/rpicam-stream.service
-install -m 644 "$MEDIA_SERVICE_SRC" /etc/systemd/system/mediamtx.service
+install -o mediamtx -g mediamtx -m 750 "$START_SCRIPT_SRC" /usr/local/bin/start_pi_stream
+install -o root -g root -m 644 "$STREAM_SERVICE_SRC" /etc/systemd/system/rpicam-stream.service
+install -o root -g root -m 644 "$MEDIA_SERVICE_SRC" /etc/systemd/system/mediamtx.service
 
 systemctl daemon-reload
-systemctl enable mediamtx.service rpicam-stream.service
+systemctl enable --now mediamtx.service
+systemctl enable --now rpicam-stream.service
 
-echo "Installation complete. Start streaming with:"
-echo "  systemctl start mediamtx.service"
-echo "  systemctl start rpicam-stream.service"
+echo "Installation complete. Streaming services are now running."
+echo "Check their status with:"
+echo "  systemctl status mediamtx.service"
+echo "  systemctl status rpicam-stream.service"
+echo "If either unit is reported as 'not found', re-run this installer from the FW-IP-Cam repository."
