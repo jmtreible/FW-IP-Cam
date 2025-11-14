@@ -56,7 +56,6 @@ fi
 
 install -d -o mediamtx -g mediamtx /var/lib/mediamtx
 install -d -o mediamtx -g mediamtx /var/log/mediamtx
-
 TMPDIR=$(mktemp -d)
 trap 'rm -rf "$TMPDIR"' EXIT
 
