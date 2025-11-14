@@ -46,9 +46,7 @@ To validate the pipeline without systemd (useful for troubleshooting), stop the 
 sudo systemctl stop rpicam-stream.service
 ./scripts/start_stream.sh -t
 ```
-The helper verifies that a camera is detected and not held by another process before attempting to stream. If it exits with an
-error, re-seat the ribbon cable, confirm no other capture commands are running (including previous test shells), and retry. Pre
-ss `Ctrl+C` to terminate the test stream once video is confirmed.
+The helper verifies that a camera is detected and not held by another process before attempting to stream. If another pipeline (including the `rpicam-stream.service` unit) is still active, it prints the owning PIDs and exits so you can stop them before retrying. If it reports no cameras are available, re-seat the ribbon cable, confirm the interface is enabled, and ensure no other capture commands are running. Press `Ctrl+C` to terminate the test stream once video is confirmed.
 
 ## Windows Consumption
 
@@ -70,9 +68,7 @@ ss `Ctrl+C` to terminate the test stream once video is confirmed.
 
 ## Troubleshooting
 
-- Confirm the camera works locally with `libcamera-hello --list-cameras` or `rpicam-still`. Stop the `rpicam-stream.service` un
-it first so the capture device is free. If the streaming logs show `No cameras detected...`, reseat the ribbon cable, reboot, a
-nd ensure the camera interface is enabled in `sudo raspi-config` before retrying.
+- Confirm the camera works locally with `libcamera-hello --list-cameras` or `rpicam-still`. Stop the `rpicam-stream.service` unit first so the capture device is free. If the helper reports that the camera is in use, review the listed processes and terminate or stop their services before retrying. If the streaming logs show `No cameras detected...`, reseat the ribbon cable, reboot, and ensure the camera interface is enabled in `sudo raspi-config` before retrying.
 - Check service status logs:
   ```bash
   sudo journalctl -u mediamtx.service

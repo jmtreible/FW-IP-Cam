@@ -13,6 +13,55 @@ terminate_children() {
 }
 trap terminate_children EXIT
 
+identify_camera_processes() {
+  local bin_basename="${CAMERA_BIN##*/}"
+  local pattern="start_pi_stream|${bin_basename}|rpicam-vid|libcamera-vid|rpicam-still|libcamera-still"
+  local entries=()
+  declare -A seen=()
+
+  if command -v pgrep >/dev/null 2>&1; then
+    while read -r pid cmd; do
+      [[ -z "$pid" ]] && continue
+      [[ "$pid" -eq "$$" ]] && continue
+      if [[ -z "${seen[$pid]:-}" ]]; then
+        seen[$pid]=1
+        entries+=("$pid:$cmd")
+      fi
+    done < <(pgrep -af "$pattern" 2>/dev/null || true)
+  else
+    while read -r pid cmd; do
+      [[ -z "$pid" ]] && continue
+      [[ "$pid" -eq "$$" ]] && continue
+      case "$cmd" in
+        *start_pi_stream*|*"$bin_basename"*|*rpicam-vid*|*libcamera-vid*|*rpicam-still*|*libcamera-still*)
+          if [[ -z "${seen[$pid]:-}" ]]; then
+            seen[$pid]=1
+            entries+=("$pid:$cmd")
+          fi
+          ;;
+      esac
+    done < <(ps -eo pid=,args= 2>/dev/null)
+  fi
+
+  printf '%s\n' "${entries[@]}"
+}
+
+camera_idle() {
+  local processes
+  processes=$(identify_camera_processes)
+  if [[ -n "$processes" ]]; then
+    echo "Camera device is currently in use by:" >&2
+    while IFS= read -r entry; do
+      [[ -z "$entry" ]] && continue
+      echo "  $entry" >&2
+    done <<<"$processes"
+    echo "Stop existing camera applications (for example: sudo systemctl stop rpicam-stream.service) before running this helper." >&2
+    return 1
+  fi
+
+  return 0
+}
+
 WIDTH=${WIDTH:-1920}
 HEIGHT=${HEIGHT:-1080}
 FRAMERATE=${FRAMERATE:-30}
@@ -72,6 +121,17 @@ while getopts "w:h:f:b:r:t?" opt; do
   esac
 done
 
+if [[ "$TEST_MODE" == true ]]; then
+  if ! camera_idle; then
+    exit 1
+  fi
+else
+  while ! camera_idle; do
+    echo "Retrying camera availability in 10 seconds..." >&2
+    sleep 10
+  done
+fi
+
 if ! command -v "$CAMERA_BIN" >/dev/null 2>&1; then
   echo "Error: $CAMERA_BIN not found. Install the Raspberry Pi camera stack." >&2
   exit 1
@@ -130,6 +190,12 @@ if [[ "$TEST_MODE" == true ]]; then
   run_pipeline
 else
   while true; do
+    if ! camera_idle; then
+      echo "Retrying camera availability in 10 seconds..." >&2
+      sleep 10
+      continue
+    fi
+
     if ! camera_available; then
       echo "Retrying camera detection in 10 seconds..." >&2
       sleep 10
