@@ -1,0 +1,23 @@
+# Minimal Mediamtx configuration for a single unauthenticated camera stream.
+# Install to /etc/mediamtx.yml on the Raspberry Pi.
+
+logLevel: info
+rtsp: yes
+
+# Disable optional listeners so the RTSP server is the only exposed endpoint.
+api: false
+metrics: false
+pprof: false
+playback: false
+rtmp: false
+rtmpAddress: ""
+hls: false
+hlsAddress: ""
+webrtc: false
+srt: false
+
+paths:
+  camera:
+    runOnReady: ""
+    runOnRead: ""
+    # Mediamtx defaults are sufficient for a pass-through H.264 stream.
