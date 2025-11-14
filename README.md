@@ -27,9 +27,9 @@ Remote IP camera toolkit for running a Raspberry Pi 4B with PoE and a camera mod
    sudo ./scripts/install_pi.sh
    ```
    This script will:
-  - Install `ffmpeg`, the Raspberry Pi camera stack, helper utilities (`curl`, `wget`, `python3`), and Mediamtx.
+   - Install `ffmpeg`, the Raspberry Pi camera stack, helper utilities (`curl`, `wget`, `python3`), and Mediamtx.
    - Create a `mediamtx` service account with access to the camera hardware and apply required permissions.
-   - Install the streaming helper and systemd unit files.
+   - Install the streaming helper, systemd unit files, and a Mediamtx configuration that disables the optional HTTP/metrics ports to avoid clashes with other services.
    - Enable and start the Mediamtx and camera streaming services so they launch automatically on boot and restart if interrupted.
 4. **Verify streaming services**
    The installer enables and starts both services automatically. Confirm they are healthy with:
@@ -68,7 +68,7 @@ Press `Ctrl+C` to terminate the test stream.
 
 ## Troubleshooting
 
-- Confirm the camera works locally with `libcamera-hello` or `rpicam-still`.
+- Confirm the camera works locally with `libcamera-hello` or `rpicam-still`. If the streaming logs show `No cameras detected...`, reconnect the ribbon cable and re-enable the camera interface in `sudo raspi-config` before retrying.
 - Check service status logs:
   ```bash
   sudo journalctl -u mediamtx.service

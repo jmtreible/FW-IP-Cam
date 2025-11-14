@@ -1,6 +1,10 @@
 # Minimal Mediamtx configuration for a single unauthenticated camera stream.
 # Install to /etc/mediamtx.yml on the Raspberry Pi.
 
+api: no
+metrics: no
+pprof: no
+
 paths:
   camera:
     runOnReady: ""

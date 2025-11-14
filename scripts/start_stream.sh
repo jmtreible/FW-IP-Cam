@@ -18,6 +18,16 @@ if [[ -z "${CAMERA_BIN:-}" ]]; then
   fi
 fi
 
+if [[ -z "${CAMERA_CHECK_BIN:-}" ]]; then
+  if command -v rpicam-hello >/dev/null 2>&1; then
+    CAMERA_CHECK_BIN="rpicam-hello"
+  elif command -v libcamera-hello >/dev/null 2>&1; then
+    CAMERA_CHECK_BIN="libcamera-hello"
+  else
+    CAMERA_CHECK_BIN=""
+  fi
+fi
+
 FFMPEG_BIN=${FFMPEG_BIN:-ffmpeg}
 RTSP_URL=${RTSP_URL:-rtsp://127.0.0.1:8554/camera}
 TEST_MODE=false
@@ -60,6 +70,19 @@ if ! command -v "$FFMPEG_BIN" >/dev/null 2>&1; then
   exit 1
 fi
 
+camera_available() {
+  if [[ -z "$CAMERA_CHECK_BIN" ]]; then
+    return 0
+  fi
+
+  if "$CAMERA_CHECK_BIN" --list-cameras >/dev/null 2>&1; then
+    return 0
+  fi
+
+  echo "No cameras detected by $CAMERA_CHECK_BIN. Ensure the camera is connected and enabled in raspi-config." >&2
+  return 1
+}
+
 run_pipeline() {
   echo "Starting camera pipeline: ${WIDTH}x${HEIGHT}@${FRAMERATE} -> ${RTSP_URL}" >&2
   "$CAMERA_BIN" \
@@ -85,6 +108,12 @@ if [[ "$TEST_MODE" == true ]]; then
   run_pipeline
 else
   while true; do
+    if ! camera_available; then
+      echo "Retrying camera detection in 10 seconds..." >&2
+      sleep 10
+      continue
+    fi
+
     if ! run_pipeline; then
       echo "Pipeline exited unexpectedly; restarting in 2 seconds..." >&2
       sleep 2
